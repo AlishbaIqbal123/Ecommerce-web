@@ -1,6 +1,7 @@
 # 🌙 NoorMarket - Premium Islamic E-Commerce Platform
 
-![NoorMarket Banner](https://images.unsplash.com/photo-1590393080001-c60657eea523?w=1200&q=80)
+
+https://github.com/user-attachments/assets/55dea66c-d0e8-4f29-bf03-2420fe2aaa75
 
 NoorMarket is a sophisticated, "Pinterest-coded" e-commerce ecosystem designed specifically for the global Islamic lifestyle market. It bridges the gap between traditional values and modern technology, providing an elegant platform for artisans, scholars, and businesses to reach a global audience.
 
