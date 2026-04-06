@@ -134,6 +134,14 @@ export const PRODUCT_CATEGORIES = [
     image: '/images/products/tasbih-1.jpg',
     featured: false,
   },
+  {
+    id: 'others',
+    name: 'Others',
+    description: 'Other Islamic lifestyle products',
+    icon: 'MoreHorizontal',
+    image: '/images/products/tasbih-1.jpg',
+    featured: false,
+  },
 ] as const;
 
 // ============================================

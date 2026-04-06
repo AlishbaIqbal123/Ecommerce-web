@@ -1069,6 +1069,53 @@ export const MOCK_PRODUCTS: Product[] = [
         updatedAt: new Date(),
         vendorName: 'Modest Modern',
     },
+    {
+        id: 'p38',
+        vendorId: 'v1',
+        categoryId: 'gifts',
+        name: 'Modern Royal Wedding Planning Binder - Complete Digital Organizer',
+        slug: 'modern-royal-wedding-planning-binder-digital-organizer',
+        description: `Elevate your wedding journey with the ultimate organization tool. Designed with a luxury Pinterest-inspired royal aesthetic.
+
+What’s Included in Your 7-Page Digital Download:
+
+1. 🏰 The Royal Signature Cover: An elegant frame with floral corners and placeholders for names and date.
+2. 📋 The Ultimate Planning Timeline: A strategic, month-by-month checklist starting 12 months before.
+3. 🕊️ Guest List & RSVP Tracker: Manage RSVPs, plus-ones, and gifts received in one clean table.
+4. ✨ Your Dream Vendor Directory: Centralize your dream team’s contacts—from your Photographer to your Hair & Makeup Artist.
+5. ⏰ The Hour-by-Hour Countdown: A minute-by-minute schedule to ensure every moment is captured perfectly.
+6. 💰 The Grand Budget Strategist: A comprehensive financial tracker to help you stay within your champagne-inspired budget.
+7. 🥂 The Seating Harmony Planner: A beautifully structured grid for reception tables and guests.
+
+Specifications:
+- Format: High-resolution, print-ready PDF (A4 Size)
+- Aesthetic: Soft neutrals (champagne, cream, blush) with royal gold accents.
+- Modern typography for a premium, editorial look.`,
+        price: 19.99,
+        sku: 'WD-001',
+        inventory: 1000,
+        trackInventory: false,
+        allowBackorders: true,
+        images: [
+            '/images/products/wedding-planner-1.png',
+            '/images/products/wedding-planner-2.png',
+            '/images/products/wedding-planner-3.png',
+            '/images/products/wedding-planner-4.png',
+            '/images/products/wedding-planner-5.png',
+            '/images/products/wedding-planner-6.png',
+            '/images/products/wedding-planner-7.png'
+        ],
+        tags: ['wedding', 'planner', 'printable', 'digital product', 'organization', 'royal aesthetic', 'checklist'],
+        status: 'active',
+        featured: true,
+        rating: 5.0,
+        reviewCount: 12,
+        salesCount: 145,
+        viewsCount: 1200,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        vendorName: 'NoorMarket Originals',
+    },
 ];
 
 export const MOCK_REVIEWS: Review[] = [

@@ -7,24 +7,37 @@ import { Button } from '@/components/ui/button';
 import { Heart, ShoppingBag, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { Product } from '@/types';
+import { getDocument } from '@/lib/firebase/firestore';
 
 export default function WishlistPage() {
-    const { wishlist, products, fetchProducts, isLoading } = useProductStore();
+    const { wishlist } = useProductStore();
     const { user } = useAuthStore();
     const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
+    const [isLoadingWishlist, setIsLoadingWishlist] = useState(true);
 
     useEffect(() => {
-        // Fetch all products so we can filter by wishlist IDs
-        fetchProducts(true);
-    }, [fetchProducts]);
+        const loadWishlistProducts = async () => {
+            if (wishlist.length === 0) {
+                setWishlistProducts([]);
+                setIsLoadingWishlist(false);
+                return;
+            }
+            
+            setIsLoadingWishlist(true);
+            try {
+                const fetched = await Promise.all(
+                    wishlist.map(id => getDocument<Product>('products', id))
+                );
+                setWishlistProducts(fetched.filter(Boolean) as Product[]);
+            } catch (error) {
+                console.error("Failed to fetch wishlist products:", error);
+            } finally {
+                setIsLoadingWishlist(false);
+            }
+        };
 
-    useEffect(() => {
-        if (products.length > 0 || !isLoading) {
-            // Filter products that are in the wishlist
-            const filtered = products.filter((p) => wishlist.includes(p.id));
-            setWishlistProducts(filtered);
-        }
-    }, [products, wishlist, isLoading]);
+        loadWishlistProducts();
+    }, [wishlist]);
 
     return (
         <div className="container-elegant py-8 animate-fade-in">
@@ -93,12 +106,12 @@ export default function WishlistPage() {
                 <>
                     <ProductGrid
                         products={wishlistProducts}
-                        isLoading={isLoading && wishlistProducts.length === 0}
+                        isLoading={isLoadingWishlist && wishlistProducts.length === 0}
                         columns={4}
                     />
 
                     {/* If products loaded but none matched wishlist IDs (e.g. products deleted) */}
-                    {!isLoading && wishlistProducts.length === 0 && wishlist.length > 0 && (
+                    {!isLoadingWishlist && wishlistProducts.length === 0 && wishlist.length > 0 && (
                         <div className="text-center py-16 bg-beige-100/30 rounded-2xl border border-dashed border-beige-300">
                             <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                             <h2 className="text-lg font-medium mb-2">Some saved items are no longer available</h2>

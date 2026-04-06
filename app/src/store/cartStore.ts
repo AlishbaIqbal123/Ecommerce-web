@@ -75,9 +75,9 @@ export const useCartStore = create<CartState>()(
             productId: product.id,
             name: product.name,
             slug: product.slug,
-            price: product.salePrice || product.price,
-            originalPrice: product.price,
-            quantity: Math.min(quantity, CART.MAX_QUANTITY_PER_ITEM),
+            price: Number(product.salePrice) || Number(product.price) || 0,
+            originalPrice: Number(product.price) || 0,
+            quantity: Math.min(Number(quantity) || 1, CART.MAX_QUANTITY_PER_ITEM),
             image: product.images[0] || '',
             variant,
             vendorId: product.vendorId,
@@ -170,27 +170,27 @@ export const useCartItemCount = () =>
 
 export const useCartSubtotal = () =>
   useCartStore((state) =>
-    state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    state.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0)
   );
 
 export const useCartShipping = () =>
   useCartStore((state) => {
-    const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = state.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
     if (subtotal >= CART.FREE_SHIPPING_THRESHOLD) return 0;
-    return state.customShippingCost || 5.99;
+    return Number(state.customShippingCost) || 5.99;
   });
 
 export const useCartTax = () =>
   useCartStore((state) => {
-    const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = state.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
     return Math.round(subtotal * CART.TAX_RATE * 100) / 100;
   });
 
 export const useCartTotal = () =>
   useCartStore((state) => {
-    const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = state.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
     const shipping =
-      subtotal >= CART.FREE_SHIPPING_THRESHOLD ? 0 : state.customShippingCost || 5.99;
+      subtotal >= CART.FREE_SHIPPING_THRESHOLD ? 0 : Number(state.customShippingCost) || 5.99;
     const tax = Math.round(subtotal * CART.TAX_RATE * 100) / 100;
     return subtotal + shipping + tax;
   });

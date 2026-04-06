@@ -3,6 +3,7 @@
 // ============================================
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Product, Category, ProductFilters } from '@/types';
 import {
   getProducts,
@@ -80,7 +81,9 @@ const defaultFilters: ProductFilters = {
 // PRODUCT STORE IMPLEMENTATION
 // ============================================
 
-export const useProductStore = create<ProductState>()((set, get) => ({
+export const useProductStore = create<ProductState>()(
+  persist(
+    (set, get) => ({
   // Initial state
   products: [],
   featuredProducts: [],
@@ -256,7 +259,12 @@ export const useProductStore = create<ProductState>()((set, get) => ({
   isInWishlist: (productId) => {
     return get().wishlist.includes(productId);
   },
-}));
+}),
+{
+  name: 'product-storage',
+  partialize: (state) => ({ wishlist: state.wishlist }),
+}
+));
 
 // ============================================
 // SELECTOR HOOKS

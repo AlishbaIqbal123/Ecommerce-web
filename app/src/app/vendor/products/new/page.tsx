@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ArrowLeft, Upload, X, Package } from 'lucide-react';
+import { ArrowLeft, Upload, X, Package, Plus, Trash2 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import Link from 'next/link';
@@ -27,6 +27,8 @@ export default function NewProductPage() {
     const { currentVendor } = useVendorStore();
     const [isLoading, setIsLoading] = useState(false);
 
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -35,10 +37,39 @@ export default function NewProductPage() {
         categoryId: '',
         image: '',
     });
+    
+    // Dynamic specifications
+    const [attributes, setAttributes] = useState<{ id: string, name: string, value: string }[]>([]);
+
+    const addAttribute = () => {
+        setAttributes([...attributes, { id: Date.now().toString(), name: '', value: '' }]);
+    };
+
+    const updateAttribute = (id: string, field: 'name' | 'value', val: string) => {
+        setAttributes(attributes.map(attr => attr.id === id ? { ...attr, [field]: val } : attr));
+    };
+
+    const removeAttribute = (id: string) => {
+        setAttributes(attributes.filter(attr => attr.id !== id));
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setFormData((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setSelectedFiles((prev) => [...prev, ...files]);
+            const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+            setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+        }
+    };
+
+    const removeFile = (index: number) => {
+        setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+        setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleCategoryChange = (value: string) => {
@@ -52,8 +83,18 @@ export default function NewProductPage() {
         setIsLoading(true);
         try {
             const { createDocument } = await import('@/lib/firebase/firestore');
+            const { uploadImage } = await import('@/lib/firebase/storage');
+            
             const slug = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
             const productId = `prod_${Date.now()}`;
+            
+            // Upload all selected files
+            const uploadedUrls: string[] = [];
+            for (const file of selectedFiles) {
+                const storagePath = `products/${currentVendor.id}/${productId}/${Date.now()}_${file.name}`;
+                const url = await uploadImage(file, storagePath);
+                uploadedUrls.push(url);
+            }
 
             const productData = {
                 id: productId,
@@ -65,7 +106,7 @@ export default function NewProductPage() {
                 price: Number(formData.price),
                 inventory: Number(formData.inventory),
                 categoryId: formData.categoryId,
-                images: [formData.image || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop'],
+                images: uploadedUrls.length > 0 ? uploadedUrls : [formData.image || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop'],
                 status: 'active',
                 rating: 0,
                 reviewCount: 0,
@@ -74,6 +115,16 @@ export default function NewProductPage() {
                 featured: false,
                 tags: [],
             };
+            
+            const finalAttributes: Record<string, string> = {};
+            attributes.forEach(attr => {
+                if (attr.name.trim() && attr.value.trim()) {
+                    finalAttributes[attr.name.trim()] = attr.value.trim();
+                }
+            });
+            if (Object.keys(finalAttributes).length > 0) {
+                (productData as any).attributes = finalAttributes;
+            }
 
             await createDocument('products', productId, productData);
             toast.success('Product created successfully!');
@@ -151,6 +202,42 @@ export default function NewProductPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                        
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle className="text-lg">Specifications & Attributes</CardTitle>
+                                <Button type="button" variant="outline" size="sm" onClick={addAttribute}>
+                                    <Plus className="w-4 h-4 mr-1" /> Add Detail
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {attributes.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">No specifications added. Click the button above to add details like "Format", "Size", "Material", etc.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {attributes.map((attr) => (
+                                            <div key={attr.id} className="flex gap-2 items-start">
+                                                <div className="grid grid-cols-2 gap-2 flex-1">
+                                                    <Input
+                                                        placeholder="e.g. Format"
+                                                        value={attr.name}
+                                                        onChange={(e) => updateAttribute(attr.id, 'name', e.target.value)}
+                                                    />
+                                                    <Input
+                                                        placeholder="e.g. Digital PDF"
+                                                        value={attr.value}
+                                                        onChange={(e) => updateAttribute(attr.id, 'value', e.target.value)}
+                                                    />
+                                                </div>
+                                                <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => removeAttribute(attr.id)}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         <div className="grid md:grid-cols-2 gap-8">
                             <Card>
@@ -186,40 +273,61 @@ export default function NewProductPage() {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-lg">Product Image</CardTitle>
+                                    <CardTitle className="text-lg">Product Media</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="image">Image URL</Label>
-                                        <Input
-                                            id="image"
-                                            value={formData.image}
-                                            onChange={handleChange}
-                                            placeholder="https://..."
-                                        />
-                                        <p className="text-[10px] text-muted-foreground">
-                                            For demo, please provide a direct image URL.
-                                        </p>
-                                    </div>
-                                    {formData.image && (
-                                        <div className="relative aspect-square rounded-lg overflow-hidden border border-beige-200">
-                                            <img
-                                                src={formData.image}
-                                                alt="Preview"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Invalid+Image';
-                                                }}
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-beige-200 rounded-lg p-6 bg-beige-50/10 hover:bg-beige-50/20 transition-colors cursor-pointer relative">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={handleFileChange}
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
-                                                className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
+                                            <Upload className="w-8 h-8 text-gold-100 mb-2" />
+                                            <p className="text-sm font-medium">Click to upload images</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Upload primary cover and showcase images</p>
                                         </div>
-                                    )}
+
+                                        {previewUrls.length > 0 && (
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {previewUrls.map((url, index) => (
+                                                    <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-beige-100 group">
+                                                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeFile(index)}
+                                                            className="absolute top-1 right-1 p-0.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                        {index === 0 && (
+                                                            <div className="absolute bottom-0 left-0 right-0 bg-gold-100/80 text-white text-[8px] py-0.5 text-center px-1">Cover</div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="relative">
+                                            <div className="absolute inset-0 flex items-center">
+                                                <span className="w-full border-t border-beige-100" />
+                                            </div>
+                                            <div className="relative flex justify-center text-xs uppercase">
+                                                <span className="bg-white px-2 text-muted-foreground">Or provide URL</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Input
+                                                id="image"
+                                                value={formData.image}
+                                                onChange={handleChange}
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -229,7 +337,7 @@ export default function NewProductPage() {
                                 <Link href="/vendor/dashboard">Cancel</Link>
                             </Button>
                             <Button type="submit" disabled={isLoading}>
-                                {isLoading ? 'Creating...' : 'Create Product'}
+                                {isLoading ? 'Processing...' : 'Create Product'}
                             </Button>
                         </div>
                     </form>

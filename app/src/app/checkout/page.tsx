@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, CreditCard } from 'lucide-react';
-import { useCartStore, useAuthStore } from '@/store';
+import { useCartStore, useAuthStore, useCartSubtotal, useCartTax, useCartItems } from '@/store';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,10 @@ import {
 const stripePromise = getStripe();
 
 export default function CheckoutPage() {
-    const { items, subtotal, tax, clearCart } = useCartStore();
+    const items = useCartItems();
+    const subtotal = useCartSubtotal();
+    const tax = useCartTax();
+    const clearCart = useCartStore((state) => state.clearCart);
     const { user } = useAuthStore();
     const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
     const [shippingMethod, setShippingMethod] = useState<string>(SHIPPING.METHODS[0].id);

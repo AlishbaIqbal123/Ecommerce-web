@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Minus, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
-import { useCartStore } from '@/store';
+import { useCartStore, useCartItems, useCartSubtotal, useCartShipping, useCartTax, useCartTotal } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -12,7 +12,12 @@ import { formatCurrency } from '@/lib/utils';
 import { CART } from '@/lib/constants';
 
 export function CartDrawer() {
-  const { items, isCartOpen, setCartOpen, removeItem, updateQuantity, subtotal, shippingCost, tax, total, clearCart } = useCartStore();
+  const { isCartOpen, setCartOpen, removeItem, updateQuantity, clearCart } = useCartStore();
+  const items = useCartItems();
+  const subtotal = useCartSubtotal();
+  const shippingCost = useCartShipping();
+  const tax = useCartTax();
+  const total = useCartTotal();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

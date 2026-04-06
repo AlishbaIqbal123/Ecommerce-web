@@ -42,8 +42,12 @@ import { MOCK_PRODUCTS, MOCK_REVIEWS, MOCK_VENDORS } from '../mockData';
 import { PRODUCT_CATEGORIES } from '../constants';
 
 // Flag to force mock data usage if needed (e.g. during dev without backend)
-// Set to false for production
-const FORCE_MOCK_DATA = false;
+// Set to true for production demo stability
+export const FORCE_MOCK_DATA = true;
+
+// In-memory store for newly created products in mock mode
+const EXTRA_MOCK_PRODUCTS: Product[] = [];
+const EXTRA_MOCK_VENDORS: Vendor[] = [];
 
 /**
  * Cleanup data before sending to Firestore
@@ -78,6 +82,16 @@ export const createDocument = async <T extends Record<string, unknown>>(
   id: string,
   data: T
 ): Promise<void> => {
+  if (FORCE_MOCK_DATA) {
+    if (collectionName === 'products') {
+      EXTRA_MOCK_PRODUCTS.unshift({ id, ...data } as unknown as Product);
+    } else if (collectionName === 'vendors') {
+      EXTRA_MOCK_VENDORS.push({ id, ...data } as unknown as Vendor);
+    }
+    console.log(`Mock: Document created in ${collectionName}:`, data);
+    return;
+  }
+
   const sanitizedData = sanitizeData(data);
   await setDoc(doc(db, collectionName, id), {
     ...sanitizedData,
@@ -90,6 +104,15 @@ export const getDocument = async <T>(
   collectionName: string,
   id: string
 ): Promise<T | null> => {
+  if (FORCE_MOCK_DATA) {
+    if (collectionName === 'products') {
+      return (EXTRA_MOCK_PRODUCTS.find((p) => p.id === id) || MOCK_PRODUCTS.find((p) => p.id === id) || null) as unknown as T;
+    } else if (collectionName === 'vendors') {
+      return (EXTRA_MOCK_VENDORS.find((v) => v.id === id) || MOCK_VENDORS.find((v) => v.id === id) || null) as unknown as T;
+    }
+    return null; // Strict fallback for other collections
+  }
+
   try {
     const docSnap = await getDoc(doc(db, collectionName, id));
     if (docSnap.exists()) {
@@ -98,6 +121,10 @@ export const getDocument = async <T>(
     return null;
   } catch (error) {
     console.warn(`Error fetching document ${collectionName}/${id}:`, error);
+    if (FORCE_MOCK_DATA) {
+      if (collectionName === 'products') return MOCK_PRODUCTS.find(p => p.id === id) as unknown as T;
+      if (collectionName === 'vendors') return MOCK_VENDORS.find(v => v.id === id) as unknown as T;
+    }
     return null;
   }
 };
@@ -136,12 +163,23 @@ export const executeQuery = async <T>(
   collectionName: string,
   constraints: QueryConstraint[] = []
 ): Promise<T[]> => {
+  if (FORCE_MOCK_DATA) {
+    if (collectionName === 'products') return [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS] as unknown as T[];
+    if (collectionName === 'vendors') return [...EXTRA_MOCK_VENDORS, ...MOCK_VENDORS] as unknown as T[];
+    if (collectionName === 'categories') return [...PRODUCT_CATEGORIES] as unknown as T[];
+    return [] as unknown as T[]; // Strict fallback
+  }
+
   try {
     const q = buildQuery(collectionName, constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as T);
   } catch (error) {
     console.error(`Error executing query on ${collectionName}:`, error);
+    if (FORCE_MOCK_DATA) {
+        if (collectionName === 'products') return MOCK_PRODUCTS as unknown as T[];
+        if (collectionName === 'vendors') return MOCK_VENDORS as unknown as T[];
+    }
     return [];
   }
 };
@@ -156,6 +194,11 @@ export const getPaginated = async <T>(
   constraints: QueryConstraint[] = []
 ): Promise<PaginatedResult<T>> => {
   const { page: _page, limit: pageSize, cursor } = pagination;
+
+  if (FORCE_MOCK_DATA) {
+      if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
+      return { data: [], hasMore: false }; // Strict fallback
+  }
 
   const queryConstraints: QueryConstraint[] = [
     ...constraints,
@@ -190,6 +233,9 @@ export const getPaginated = async <T>(
     };
   } catch (error) {
     console.error(`Error fetching paginated data from ${collectionName}:`, error);
+    if (FORCE_MOCK_DATA) {
+        if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
+    }
     return { data: [], hasMore: false };
   }
 };
@@ -203,6 +249,20 @@ export const subscribeToDocument = <T>(
   id: string,
   callback: (data: T | null) => void
 ) => {
+  if (FORCE_MOCK_DATA) {
+    // Return mock data immediately and dummy unsubscribe
+    if (collectionName === 'vendors') {
+      const vendor = EXTRA_MOCK_VENDORS.find(v => v.id === id) || MOCK_VENDORS.find(v => v.id === id) || null;
+      callback(vendor as unknown as T);
+    } else if (collectionName === 'products') {
+      const product = EXTRA_MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS.find(p => p.id === id) || null;
+      callback(product as unknown as T);
+    } else {
+      callback(null);
+    }
+    return () => {};
+  }
+
   return onSnapshot(doc(db, collectionName, id), (docSnap) => {
     if (docSnap.exists()) {
       callback({ id: docSnap.id, ...docSnap.data() } as T);
@@ -220,6 +280,17 @@ export const subscribeToCollection = <T>(
   callback: (data: T[]) => void,
   constraints: QueryConstraint[] = []
 ) => {
+  if (FORCE_MOCK_DATA) {
+    if (collectionName === 'products') {
+      callback([...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS] as unknown as T[]);
+    } else if (collectionName === 'vendors') {
+      callback([...EXTRA_MOCK_VENDORS, ...MOCK_VENDORS] as unknown as T[]);
+    } else {
+      callback([]);
+    }
+    return () => {};
+  }
+
   const q = buildQuery(collectionName, constraints);
   return onSnapshot(q, (querySnapshot) => {
     const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as T);
@@ -425,7 +496,7 @@ export const getProducts = async (
 
 // Helper for Mock Products
 const getMockProducts = (filters: ProductFilters, pagination?: PaginationParams): PaginatedResult<Product> => {
-  let filteredProducts = [...MOCK_PRODUCTS];
+  let filteredProducts = [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS];
 
   if (filters.category) {
     filteredProducts = filteredProducts.filter((p) => p.categoryId === filters.category);
@@ -487,7 +558,9 @@ const getMockProducts = (filters: ProductFilters, pagination?: PaginationParams)
 };
 
 export const getProductBySlug = async (slug: string): Promise<Product | null> => {
-  if (FORCE_MOCK_DATA) return MOCK_PRODUCTS.find((p) => p.slug === slug) || null;
+  if (FORCE_MOCK_DATA) {
+    return EXTRA_MOCK_PRODUCTS.find((p) => p.slug === slug) || MOCK_PRODUCTS.find((p) => p.slug === slug) || null;
+  }
 
   try {
     const products = await executeQuery<Product>('products', [
@@ -513,7 +586,7 @@ export const getProductsByVendor = async (
   status?: string
 ): Promise<Product[]> => {
   if (FORCE_MOCK_DATA) {
-    let products = MOCK_PRODUCTS.filter((p) => p.vendorId === vendorId);
+    let products = [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].filter((p) => p.vendorId === vendorId);
     if (status) products = products.filter((p) => p.status === status);
     return products;
   }
@@ -791,6 +864,22 @@ export const createVendor = async (vendor: any): Promise<string> => {
 };
 
 export const getVendorByUserId = async (userId: string): Promise<Vendor | null> => {
+  if (FORCE_MOCK_DATA) {
+    const found = EXTRA_MOCK_VENDORS.find(v => v.userId === userId) || MOCK_VENDORS.find(v => v.userId === userId);
+    if (found) return found;
+
+    // Fallback for demo: Any authenticated user is a vendor
+    if (userId) {
+      return { 
+        ...MOCK_VENDORS[0], 
+        userId, 
+        id: `v_mock_${userId.slice(-4)}`,
+        businessName: 'NoorMarket Vendor'
+      };
+    }
+    return null;
+  }
+
   try {
     const vendors = await executeQuery<Vendor>('vendors', [
       where('userId', '==', userId),
