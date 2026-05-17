@@ -367,74 +367,7 @@ export default function ProductPage() {
                             {user && (
                                 <div className="bg-beige-100/50 p-6 rounded-xl mb-8 border border-beige-200">
                                     <h3 className="text-lg font-medium mb-4">Write a Review</h3>
-                                    <form className="space-y-4" onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const form = e.target as HTMLFormElement;
-                                        const title = (form.elements.namedItem('reviewTitle') as HTMLInputElement).value;
-                                        const content = (form.elements.namedItem('reviewContent') as HTMLTextAreaElement).value;
-                                        const rating = Number((form.querySelector('[name=rating]') as HTMLInputElement)?.value || 5);
-
-                                        try {
-                                            const { createReview } = await import('@/lib/firebase/firestore');
-                                            await createReview({
-                                                productId: product.id,
-                                                userId: user.id,
-                                                userName: user.displayName || 'Anonymous',
-                                                userPhotoURL: user.photoURL || '',
-                                                rating,
-                                                title,
-                                                content,
-                                                status: 'approved', // Auto-approve for demo
-                                                createdAt: new Date(),
-                                                updatedAt: new Date()
-                                            } as any);
-                                            toast.success('Review posted successfully!');
-                                            form.reset();
-                                        } catch (err) {
-                                            toast.error('Failed to post review');
-                                        }
-                                    }}>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-sm font-medium">Rating:</span>
-                                            <input type="hidden" name="rating" defaultValue="5" />
-                                            <div className="flex items-center gap-1">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <button
-                                                        key={star}
-                                                        type="button"
-                                                        className="text-gold-100 hover:scale-110 transition-transform"
-                                                        onClick={(e) => {
-                                                            const btn = e.currentTarget;
-                                                            const input = btn.parentElement?.previousElementSibling as HTMLInputElement;
-                                                            input.value = star.toString();
-                                                            // Simple visual feedback
-                                                            const stars = btn.parentElement?.children || [];
-                                                            for (let i = 0; i < 5; i++) {
-                                                                (stars[i]?.children[0] as SVGElement).style.fill = i < star ? 'currentColor' : 'none';
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Star className="w-5 h-5 fill-current" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reviewTitle">Review Title</Label>
-                                            <Input id="reviewTitle" name="reviewTitle" placeholder="Sum up your experience" required />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reviewContent">Your Review</Label>
-                                            <textarea
-                                                id="reviewContent"
-                                                name="reviewContent"
-                                                className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-100 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                placeholder="What did you like or dislike?"
-                                                required
-                                            />
-                                        </div>
-                                        <Button type="submit">Submit Review</Button>
-                                    </form>
+                                    <ReviewForm productId={product.id} user={user} />
                                 </div>
                             )}
 
@@ -512,7 +445,13 @@ function ReviewList({ productId }: { productId: string }) {
                             </div>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                            {new Date(review.createdAt).toLocaleDateString()}
+                            {(() => {
+                                const d = review.createdAt;
+                                if (!d) return '';
+                                // Firestore Timestamp has .seconds, JS Date works directly
+                                const date = d?.seconds ? new Date(d.seconds * 1000) : new Date(d);
+                                return isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+                            })()}
                         </span>
                     </div>
                     <h4 className="font-medium mb-2">{review.title}</h4>
@@ -520,5 +459,93 @@ function ReviewList({ productId }: { productId: string }) {
                 </div>
             ))}
         </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEW FORM — controlled rating, all required fields, proper error handling
+// ─────────────────────────────────────────────────────────────────────────────
+function ReviewForm({ productId, user }: { productId: string; user: any }) {
+    const [rating, setRating] = useState(5);
+    const [hovered, setHovered] = useState(0);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim() || !content.trim()) return;
+        setSubmitting(true);
+        try {
+            const { createReview } = await import('@/lib/firebase/firestore');
+            await createReview({
+                productId,
+                userId: user.id,
+                orderId: '',               // not tied to a specific order
+                userName: user.displayName || 'Anonymous',
+                userPhotoURL: user.photoURL || '',
+                rating,
+                title: title.trim(),
+                content: content.trim(),
+                images: [],
+                helpful: 0,
+                verified: false,
+                status: 'approved',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            } as any);
+            toast.success('Review posted!');
+            setTitle(''); setContent(''); setRating(5);
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err?.message || 'Failed to post review. Check Firestore rules.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* Star rating */}
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Rating:</span>
+                <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(s => (
+                        <button
+                            key={s}
+                            type="button"
+                            onMouseEnter={() => setHovered(s)}
+                            onMouseLeave={() => setHovered(0)}
+                            onClick={() => setRating(s)}
+                            className="transition-transform hover:scale-110"
+                        >
+                            <Star className={cn('w-5 h-5', (hovered || rating) >= s ? 'fill-gold-100 text-gold-100' : 'text-beige-300')} />
+                        </button>
+                    ))}
+                    <span className="text-sm text-muted-foreground ml-1">{rating}/5</span>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="reviewTitle">Title</Label>
+                <Input id="reviewTitle" value={title} onChange={e => setTitle(e.target.value)} placeholder="Sum up your experience" required />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="reviewContent">Review</Label>
+                <textarea
+                    id="reviewContent"
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-100 focus-visible:ring-offset-2"
+                    placeholder="What did you like or dislike?"
+                    required
+                />
+            </div>
+
+            <Button type="submit" disabled={submitting}>
+                {submitting ? 'Posting...' : 'Submit Review'}
+            </Button>
+        </form>
     );
 }

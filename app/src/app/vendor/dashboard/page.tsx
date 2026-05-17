@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore, useVendorStore, useOrderStore } from '@/store';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -54,25 +55,50 @@ export default function VendorDashboard() {
     const { user } = useAuthStore();
     const { currentVendor, vendorProducts, fetchVendorByUserId, fetchVendorProducts } = useVendorStore();
     const { orders, fetchVendorOrders } = useOrderStore();
+    const [vendorStatus, setVendorStatus] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
             fetchVendorByUserId(user.id).then((vendor) => {
                 if (vendor) {
-                    fetchVendorProducts(vendor.id);
-                    fetchVendorOrders(vendor.id);
+                    setVendorStatus(vendor.status);
+                    if (vendor.status === 'approved') {
+                        fetchVendorProducts(vendor.id);
+                        fetchVendorOrders(vendor.id);
+                    }
                 }
             });
         }
     }, [user, fetchVendorByUserId, fetchVendorProducts, fetchVendorOrders]);
 
-    if (!currentVendor) {
+    if (!currentVendor && vendorStatus === null) {
         return (
             <div className="container-elegant py-20 text-center">
                 <h2 className="text-2xl font-heading font-semibold mb-4">You are not a registered vendor yet.</h2>
                 <Button asChild>
                     <Link href="/vendor/register">Apply for Vendor Account</Link>
                 </Button>
+            </div>
+        );
+    }
+
+    if (currentVendor?.status === 'pending') {
+        return (
+            <div className="container-elegant py-20 text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ShoppingCart className="w-8 h-8 text-yellow-600" />
+                </div>
+                <h2 className="text-2xl font-heading font-semibold mb-2">Application Under Review</h2>
+                <p className="text-muted-foreground max-w-md mx-auto">Your vendor application for <strong>{currentVendor.businessName}</strong> is pending admin approval. You will be notified once approved.</p>
+            </div>
+        );
+    }
+
+    if (currentVendor?.status === 'suspended') {
+        return (
+            <div className="container-elegant py-20 text-center">
+                <h2 className="text-2xl font-heading font-semibold mb-2 text-red-600">Account Suspended</h2>
+                <p className="text-muted-foreground">Your vendor account has been suspended. Please contact support.</p>
             </div>
         );
     }
@@ -100,7 +126,7 @@ export default function VendorDashboard() {
     };
 
     return (
-        <ProtectedRoute requireVendor>
+        <ProtectedRoute>
             <div className="container-elegant py-8 animate-fade-in">
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Sidebar */}
@@ -372,86 +398,136 @@ export default function VendorDashboard() {
 
                         {/* Settings Content */}
                         {activeTab === 'settings' && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Business Settings</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-6">
-                                    <form className="space-y-6" onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.currentTarget);
-                                        const data = {
-                                            businessName: formData.get('businessName'),
-                                            description: formData.get('description'),
-                                            vendorType: formData.get('vendorType'),
-                                            collaboratorStatus: formData.get('collaboratorStatus'),
-                                            logo: formData.get('logo'),
-                                            banner: formData.get('banner'),
-                                        };
-                                        try {
-                                            const { updateDocument } = await import('@/lib/firebase/firestore');
-                                            await updateDocument('vendors', currentVendor.id, data);
-                                            toast.success('Settings updated');
-                                            fetchVendorByUserId(user!.id);
-                                        } catch (err) {
-                                            toast.error('Failed to update settings');
-                                        }
-                                    }}>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="businessName">Business Name</Label>
-                                                <Input id="businessName" name="businessName" defaultValue={currentVendor.businessName} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="vendorType">Vendor Type</Label>
-                                                <Select name="vendorType" defaultValue={currentVendor.vendorType || 'Brand'}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Brand">Brand</SelectItem>
-                                                        <SelectItem value="Maker">Maker</SelectItem>
-                                                        <SelectItem value="Artisan">Artisan</SelectItem>
-                                                        <SelectItem value="Curator">Curator</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="logo">Logo URL</Label>
-                                                <Input id="logo" name="logo" defaultValue={currentVendor.logo} placeholder="https://..." />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="banner">Banner Image URL</Label>
-                                                <Input id="banner" name="banner" defaultValue={currentVendor.banner} placeholder="https://..." />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="collaboratorStatus">Collaborator Status</Label>
-                                            <Select name="collaboratorStatus" defaultValue={currentVendor.collaboratorStatus || 'Solo'}>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Solo">Solo (You)</SelectItem>
-                                                    <SelectItem value="Collaborator">Collaborator</SelectItem>
-                                                    <SelectItem value="Enterprise">Enterprise</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="description">Store Description</Label>
-                                            <Textarea id="description" name="description" defaultValue={currentVendor.description} rows={4} />
-                                        </div>
-                                        <Button type="submit">Save Changes</Button>
-                                    </form>
-                                </CardContent>
-                            </Card>
+                            <VendorSettingsTab
+                                currentVendor={currentVendor}
+                                userId={user!.id}
+                                fetchVendorByUserId={fetchVendorByUserId}
+                            />
                         )}
                     </main>
                 </div>
             </div>
         </ProtectedRoute>
+    );
+}
+
+function VendorSettingsTab({
+    currentVendor,
+    userId,
+    fetchVendorByUserId,
+}: {
+    currentVendor: any;
+    userId: string;
+    fetchVendorByUserId: (id: string) => Promise<any>;
+}) {
+    const [form, setForm] = useState({
+        businessName: currentVendor.businessName || '',
+        description: currentVendor.description || '',
+        vendorType: currentVendor.vendorType || 'Brand',
+        collaboratorStatus: currentVendor.collaboratorStatus || 'Solo',
+        logo: currentVendor.logo || '',
+        banner: currentVendor.banner || '',
+    });
+    const [saving, setSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const { updateDocument } = await import('@/lib/firebase/firestore');
+            await updateDocument('vendors', currentVendor.id, form);
+            toast.success('Settings updated');
+            fetchVendorByUserId(userId);
+        } catch {
+            toast.error('Failed to update settings');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Business Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Business Name</Label>
+                            <Input value={form.businessName} onChange={e => setForm(p => ({ ...p, businessName: e.target.value }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Vendor Type</Label>
+                            <Select value={form.vendorType} onValueChange={v => setForm(p => ({ ...p, vendorType: v }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Brand">Brand</SelectItem>
+                                    <SelectItem value="Maker">Maker</SelectItem>
+                                    <SelectItem value="Artisan">Artisan</SelectItem>
+                                    <SelectItem value="Curator">Curator</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Logo & Banner uploads */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label>Store Logo</Label>
+                            <ImageUpload
+                                value={form.logo}
+                                onChange={url => setForm(p => ({ ...p, logo: url }))}
+                                storagePath={() => `vendors/${currentVendor.id}/logo_${Date.now()}.jpg`}
+                                shape="circle"
+                                placeholder="Upload logo"
+                                className="w-28 h-28"
+                            />
+                            <Input
+                                value={form.logo}
+                                onChange={e => setForm(p => ({ ...p, logo: e.target.value }))}
+                                placeholder="Or paste logo URL"
+                                className="text-xs mt-2"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Store Banner</Label>
+                            <ImageUpload
+                                value={form.banner}
+                                onChange={url => setForm(p => ({ ...p, banner: url }))}
+                                storagePath={() => `vendors/${currentVendor.id}/banner_${Date.now()}.jpg`}
+                                shape="square"
+                                placeholder="Upload banner image"
+                            />
+                            <Input
+                                value={form.banner}
+                                onChange={e => setForm(p => ({ ...p, banner: e.target.value }))}
+                                placeholder="Or paste banner URL"
+                                className="text-xs mt-2"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Collaborator Status</Label>
+                        <Select value={form.collaboratorStatus} onValueChange={v => setForm(p => ({ ...p, collaboratorStatus: v }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Solo">Solo (You)</SelectItem>
+                                <SelectItem value="Collaborator">Collaborator</SelectItem>
+                                <SelectItem value="Enterprise">Enterprise</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Store Description</Label>
+                        <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={4} />
+                    </div>
+
+                    <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+                </form>
+            </CardContent>
+        </Card>
     );
 }

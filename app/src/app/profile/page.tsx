@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Package, User, LogOut, ExternalLink } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -166,13 +167,26 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="photoURL">Profile Picture URL</Label>
-                                            <Input
-                                                id="photoURL"
-                                                value={photoURL}
-                                                onChange={(e) => setPhotoURL(e.target.value)}
-                                                placeholder="https://images.unsplash.com/..."
-                                            />
+                                            <Label>Profile Picture</Label>
+                                            <div className="flex items-center gap-4">
+                                                <ImageUpload
+                                                    value={photoURL}
+                                                    onChange={setPhotoURL}
+                                                    storagePath={() => `avatars/${user?.id}/avatar_${Date.now()}.jpg`}
+                                                    shape="circle"
+                                                    placeholder="Upload photo"
+                                                    className="w-24 h-24 flex-shrink-0"
+                                                />
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-xs text-muted-foreground">Click the circle to upload from your device, or drag & drop an image.</p>
+                                                    <Input
+                                                        value={photoURL}
+                                                        onChange={(e) => setPhotoURL(e.target.value)}
+                                                        placeholder="Or paste an image URL"
+                                                        className="text-xs"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <Button type="submit" disabled={isUpdating || (displayName === user?.displayName && photoURL === user?.photoURL)}>

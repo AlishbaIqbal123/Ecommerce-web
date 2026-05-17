@@ -42,8 +42,8 @@ import { MOCK_PRODUCTS, MOCK_REVIEWS, MOCK_VENDORS } from '../mockData';
 import { PRODUCT_CATEGORIES } from '../constants';
 
 // Flag to force mock data usage if needed (e.g. during dev without backend)
-// Set to true for production demo stability
-export const FORCE_MOCK_DATA = true;
+// Set to false to use real Firestore backend
+export const FORCE_MOCK_DATA = false;
 
 // In-memory store for newly created products in mock mode
 const EXTRA_MOCK_PRODUCTS: Product[] = [];
@@ -177,8 +177,8 @@ export const executeQuery = async <T>(
   } catch (error) {
     console.error(`Error executing query on ${collectionName}:`, error);
     if (FORCE_MOCK_DATA) {
-        if (collectionName === 'products') return MOCK_PRODUCTS as unknown as T[];
-        if (collectionName === 'vendors') return MOCK_VENDORS as unknown as T[];
+      if (collectionName === 'products') return MOCK_PRODUCTS as unknown as T[];
+      if (collectionName === 'vendors') return MOCK_VENDORS as unknown as T[];
     }
     return [];
   }
@@ -196,8 +196,8 @@ export const getPaginated = async <T>(
   const { page: _page, limit: pageSize, cursor } = pagination;
 
   if (FORCE_MOCK_DATA) {
-      if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
-      return { data: [], hasMore: false }; // Strict fallback
+    if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
+    return { data: [], hasMore: false }; // Strict fallback
   }
 
   const queryConstraints: QueryConstraint[] = [
@@ -234,7 +234,7 @@ export const getPaginated = async <T>(
   } catch (error) {
     console.error(`Error fetching paginated data from ${collectionName}:`, error);
     if (FORCE_MOCK_DATA) {
-        if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
+      if (collectionName === 'products') return { data: [...EXTRA_MOCK_PRODUCTS, ...MOCK_PRODUCTS].slice(0, pageSize) as unknown as T[], hasMore: false };
     }
     return { data: [], hasMore: false };
   }
@@ -260,7 +260,7 @@ export const subscribeToDocument = <T>(
     } else {
       callback(null);
     }
-    return () => {};
+    return () => { };
   }
 
   return onSnapshot(doc(db, collectionName, id), (docSnap) => {
@@ -288,7 +288,7 @@ export const subscribeToCollection = <T>(
     } else {
       callback([]);
     }
-    return () => {};
+    return () => { };
   }
 
   const q = buildQuery(collectionName, constraints);
@@ -801,22 +801,9 @@ export const getVendors = async (status?: Vendor['status']): Promise<Vendor[]> =
       where('status', '==', effectiveStatus),
       orderBy('createdAt', 'desc'),
     ];
-    const vendors = await executeQuery<Vendor>('vendors', constraints);
-
-    // Only fallback to mock data if the collection is truly empty
-    // (To avoid showing mock data when real vendors exist but are suspended)
-    if (vendors.length === 0) {
-      const allVendors = await executeQuery<Vendor>('vendors', [limit(1)]);
-      if (allVendors.length === 0) {
-        return MOCK_VENDORS.filter((v) => v.status === effectiveStatus);
-      }
-    }
-    return vendors;
+    return await executeQuery<Vendor>('vendors', constraints);
   } catch (e) {
     console.error('Error fetching vendors:', e);
-    if (FORCE_MOCK_DATA) {
-      return MOCK_VENDORS.filter((v) => v.status === effectiveStatus);
-    }
     return [];
   }
 };
@@ -825,25 +812,20 @@ export const getVendors = async (status?: Vendor['status']): Promise<Vendor[]> =
 export const getAllVendorsAdmin = async (): Promise<Vendor[]> => {
   try {
     const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-    const vendors = await executeQuery<Vendor>('vendors', constraints);
-    if (vendors.length === 0) return MOCK_VENDORS;
-    return vendors;
+    return await executeQuery<Vendor>('vendors', constraints);
   } catch (e) {
-    return MOCK_VENDORS;
+    console.error('Error fetching all vendors for admin:', e);
+    return [];
   }
 };
 
 export const getVendorById = async (vendorId: string): Promise<Vendor | null> => {
-  if (FORCE_MOCK_DATA) return MOCK_VENDORS.find((v) => v.id === vendorId) || null;
-
   try {
     const vendor = await getDocument<Vendor>('vendors', vendorId);
-    if (!vendor) {
-      return MOCK_VENDORS.find((v) => v.id === vendorId) || null;
-    }
     return vendor;
   } catch (error) {
-    return MOCK_VENDORS.find((v) => v.id === vendorId) || null;
+    console.error('Error fetching vendor by id:', error);
+    return null;
   }
 };
 
@@ -864,22 +846,6 @@ export const createVendor = async (vendor: any): Promise<string> => {
 };
 
 export const getVendorByUserId = async (userId: string): Promise<Vendor | null> => {
-  if (FORCE_MOCK_DATA) {
-    const found = EXTRA_MOCK_VENDORS.find(v => v.userId === userId) || MOCK_VENDORS.find(v => v.userId === userId);
-    if (found) return found;
-
-    // Fallback for demo: Any authenticated user is a vendor
-    if (userId) {
-      return { 
-        ...MOCK_VENDORS[0], 
-        userId, 
-        id: `v_mock_${userId.slice(-4)}`,
-        businessName: 'NoorMarket Vendor'
-      };
-    }
-    return null;
-  }
-
   try {
     const vendors = await executeQuery<Vendor>('vendors', [
       where('userId', '==', userId),
@@ -917,6 +883,18 @@ export const rejectVendor = async (vendorId: string): Promise<void> => {
 
 export const deleteProductAdmin = async (productId: string): Promise<void> => {
   await deleteDoc(doc(db, 'products', productId));
+};
+
+export const addProductAdmin = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const productRef = doc(collection(db, 'products'));
+  const slug = productData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+  const sanitized = sanitizeData({ ...productData, slug });
+  await setDoc(productRef, {
+    ...sanitized,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return productRef.id;
 };
 
 export const deleteUserAdmin = async (userId: string): Promise<void> => {

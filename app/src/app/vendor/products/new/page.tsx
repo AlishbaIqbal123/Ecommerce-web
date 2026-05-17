@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore, useVendorStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -16,28 +16,34 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ArrowLeft, Upload, X, Package, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, X, Package, Plus, Trash2 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import Link from 'next/link';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 export default function NewProductPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { currentVendor } = useVendorStore();
+    const { currentVendor, fetchVendorByUserId } = useVendorStore();
     const [isLoading, setIsLoading] = useState(false);
 
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    // Ensure vendor is loaded if navigating directly to this page
+    useEffect(() => {
+        if (user && !currentVendor) {
+            fetchVendorByUserId(user.id);
+        }
+    }, [user, currentVendor, fetchVendorByUserId]);
+
+    const [uploadedImages, setUploadedImages] = useState<string[]>(['']);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         price: '',
         inventory: '',
         categoryId: '',
-        image: '',
     });
-    
+
     // Dynamic specifications
     const [attributes, setAttributes] = useState<{ id: string, name: string, value: string }[]>([]);
 
@@ -58,20 +64,6 @@ export default function NewProductPage() {
         setFormData((prev) => ({ ...prev, [id]: value }));
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length > 0) {
-            setSelectedFiles((prev) => [...prev, ...files]);
-            const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-            setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
-        }
-    };
-
-    const removeFile = (index: number) => {
-        setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-        setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
-    };
-
     const handleCategoryChange = (value: string) => {
         setFormData((prev) => ({ ...prev, categoryId: value }));
     };
@@ -83,18 +75,13 @@ export default function NewProductPage() {
         setIsLoading(true);
         try {
             const { createDocument } = await import('@/lib/firebase/firestore');
-            const { uploadImage } = await import('@/lib/firebase/storage');
-            
+
             const slug = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
             const productId = `prod_${Date.now()}`;
-            
+
             // Upload all selected files
-            const uploadedUrls: string[] = [];
-            for (const file of selectedFiles) {
-                const storagePath = `products/${currentVendor.id}/${productId}/${Date.now()}_${file.name}`;
-                const url = await uploadImage(file, storagePath);
-                uploadedUrls.push(url);
-            }
+            // Use already-uploaded Firebase URLs from ImageUpload components
+            const finalImages = uploadedImages.filter(Boolean);
 
             const productData = {
                 id: productId,
@@ -106,7 +93,7 @@ export default function NewProductPage() {
                 price: Number(formData.price),
                 inventory: Number(formData.inventory),
                 categoryId: formData.categoryId,
-                images: uploadedUrls.length > 0 ? uploadedUrls : [formData.image || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop'],
+                images: finalImages.length > 0 ? finalImages : ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop'],
                 status: 'active',
                 rating: 0,
                 reviewCount: 0,
@@ -114,8 +101,11 @@ export default function NewProductPage() {
                 viewsCount: 0,
                 featured: false,
                 tags: [],
+                sku: `SKU-${Date.now()}`,
+                trackInventory: true,
+                allowBackorders: false,
             };
-            
+
             const finalAttributes: Record<string, string> = {};
             attributes.forEach(attr => {
                 if (attr.name.trim() && attr.value.trim()) {
@@ -138,7 +128,7 @@ export default function NewProductPage() {
     };
 
     return (
-        <ProtectedRoute requireVendor>
+        <ProtectedRoute>
             <div className="container-elegant py-8 animate-fade-in">
                 <div className="max-w-3xl mx-auto">
                     <Button variant="ghost" asChild className="mb-6">
@@ -202,7 +192,7 @@ export default function NewProductPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                        
+
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="text-lg">Specifications & Attributes</CardTitle>
@@ -276,57 +266,45 @@ export default function NewProductPage() {
                                     <CardTitle className="text-lg">Product Media</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="space-y-4">
-                                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-beige-200 rounded-lg p-6 bg-beige-50/10 hover:bg-beige-50/20 transition-colors cursor-pointer relative">
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={handleFileChange}
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                            />
-                                            <Upload className="w-8 h-8 text-gold-100 mb-2" />
-                                            <p className="text-sm font-medium">Click to upload images</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Upload primary cover and showcase images</p>
-                                        </div>
-
-                                        {previewUrls.length > 0 && (
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {previewUrls.map((url, index) => (
-                                                    <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-beige-100 group">
-                                                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeFile(index)}
-                                                            className="absolute top-1 right-1 p-0.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                        {index === 0 && (
-                                                            <div className="absolute bottom-0 left-0 right-0 bg-gold-100/80 text-white text-[8px] py-0.5 text-center px-1">Cover</div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                    <p className="text-xs text-muted-foreground">Upload from your device or drag & drop. First image is the cover.</p>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {uploadedImages.map((url, index) => (
+                                            <div key={index} className="relative">
+                                                <ImageUpload
+                                                    value={url}
+                                                    onChange={(newUrl) => {
+                                                        const updated = [...uploadedImages];
+                                                        updated[index] = newUrl;
+                                                        setUploadedImages(updated);
+                                                    }}
+                                                    storagePath={() => `products/${currentVendor?.id || 'new'}/img_${index}_${Date.now()}.jpg`}
+                                                    shape="square"
+                                                    placeholder={index === 0 ? 'Cover image' : 'Add image'}
+                                                />
+                                                {index === 0 && (
+                                                    <span className="absolute bottom-1 left-1 right-1 text-center text-[9px] bg-gold-100/80 text-white rounded py-0.5 pointer-events-none">Cover</span>
+                                                )}
+                                                {index > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== index))}
+                                                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center z-10"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
                                             </div>
+                                        ))}
+                                        {uploadedImages.length < 6 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setUploadedImages(prev => [...prev, ''])}
+                                                className="aspect-video rounded-xl border-2 border-dashed border-beige-200 flex flex-col items-center justify-center gap-1 hover:border-gold-100/60 transition-colors text-muted-foreground hover:text-gold-100"
+                                            >
+                                                <Plus className="w-5 h-5" />
+                                                <span className="text-xs">Add slot</span>
+                                            </button>
                                         )}
-
-                                        <div className="relative">
-                                            <div className="absolute inset-0 flex items-center">
-                                                <span className="w-full border-t border-beige-100" />
-                                            </div>
-                                            <div className="relative flex justify-center text-xs uppercase">
-                                                <span className="bg-white px-2 text-muted-foreground">Or provide URL</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Input
-                                                id="image"
-                                                value={formData.image}
-                                                onChange={handleChange}
-                                                placeholder="https://..."
-                                            />
-                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
