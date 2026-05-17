@@ -7,23 +7,67 @@ import { cn } from '@/lib/utils';
 interface ImageUploadProps {
     value: string;
     onChange: (url: string) => void;
-    storagePath: string | (() => string);   // string or factory called at upload time
+    storagePath?: string | (() => string); // kept for API compatibility, unused
     shape?: 'square' | 'circle';
     placeholder?: string;
     className?: string;
 }
 
+const MAX_SIZE_MB = 1; // keep Firestore docs small
+const MAX_DIMENSION = 800; // resize to max 800px
+
+/** Resize + compress image and return a Base64 data URL */
+function compressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                // Scale down if larger than MAX_DIMENSION
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    if (width > height) {
+                        height = Math.round((height * MAX_DIMENSION) / width);
+                        width = MAX_DIMENSION;
+                    } else {
+                        width = Math.round((width * MAX_DIMENSION) / height);
+                        height = MAX_DIMENSION;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d')!;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Try quality 0.8 first, drop to 0.6 if still too large
+                let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                const sizeKB = Math.round((dataUrl.length * 3) / 4 / 1024);
+                if (sizeKB > MAX_SIZE_MB * 1024) {
+                    dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                }
+
+                resolve(dataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 export function ImageUpload({
     value,
     onChange,
-    storagePath,
     shape = 'square',
     placeholder = 'Click or drag to upload',
     className,
 }: ImageUploadProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
-    const [progress, setProgress] = useState(0);
     const [dragOver, setDragOver] = useState(false);
 
     const handleFile = async (file: File) => {
@@ -32,32 +76,14 @@ export function ImageUpload({
             return;
         }
         setUploading(true);
-        setProgress(0);
         try {
-            const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-            const { storage } = await import('@/lib/firebase/config');
-            // Resolve path at upload time so each upload gets a unique path
-            const path = typeof storagePath === 'function' ? storagePath() : storagePath;
-            const imageRef = ref(storage, path);
-            const task = uploadBytesResumable(imageRef, file);
-            await new Promise<void>((resolve, reject) => {
-                task.on(
-                    'state_changed',
-                    (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-                    reject,
-                    async () => {
-                        const url = await getDownloadURL(task.snapshot.ref);
-                        onChange(url);
-                        resolve();
-                    }
-                );
-            });
+            const dataUrl = await compressImage(file);
+            onChange(dataUrl);
         } catch (err) {
-            console.error('Upload failed:', err);
-            alert('Upload failed. Please try again.');
+            console.error('Image processing failed:', err);
+            alert('Failed to process image. Please try again.');
         } finally {
             setUploading(false);
-            setProgress(0);
         }
     };
 
@@ -115,13 +141,7 @@ export function ImageUpload({
                     {uploading ? (
                         <>
                             <Loader2 className="w-6 h-6 text-gold-100 animate-spin" />
-                            <span className="text-xs font-medium text-white">{progress}%</span>
-                            <div className="w-3/4 h-1 bg-white/30 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gold-100 transition-all duration-200"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
+                            <span className="text-xs font-medium text-muted-foreground">Processing...</span>
                         </>
                     ) : (
                         <>
