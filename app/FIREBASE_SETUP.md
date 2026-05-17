@@ -35,6 +35,11 @@ Push the security rules and indexes to the cloud:
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
+Also deploy Cloud Storage rules (required for image upload):
+```bash
+firebase deploy --only storage
+```
+
 ## 6. Configure Environment Variables
 1. Go to **Project Settings** > **General** in Firebase Console.
 2. Scroll to "Your apps" > Click the Web icon (</>).
@@ -43,28 +48,45 @@ firebase deploy --only firestore:rules,firestore:indexes
 5. Create a `.env` file in the `app` root (if not exists) and populate it:
 
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_DATABASE_URL=https://your_database_url.firebaseio.com
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_database_url.firebaseio.com
 ```
 
-## 7. Enable Authentication
+### Storage bucket check for Vercel
+- In Vercel Project Settings → Environment Variables, verify `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` exactly matches Firebase Console → Storage bucket name.
+- Example bucket format for this project style: `project-id.firebasestorage.app`.
+- Any mismatch can cause upload preflight/CORS failures.
+
+## 7. Configure Cloud Storage CORS (for deployed web app)
+Set bucket CORS using the provided `storage.cors.json`:
+```bash
+gsutil cors set storage.cors.json gs://<your-storage-bucket>
+gsutil cors get gs://<your-storage-bucket>
+```
+
+Ensure your production origin is included, for example:
+- `https://ecommerce-web-omega-amber.vercel.app`
+- plus local origin(s) you use for development.
+
+## 8. Enable Authentication
 1. Go to **Authentication** > **Sign-in method** in Firebase Console.
 2. Enable **Email/Password**.
 3. Enable **Google** (optional).
 
-## 8. Seed the Database (Important!)
+## 9. Seed the Database (Important!)
 Since your new Firestore database is empty, the app will fallback to mock data initially. To populate it with real data:
 1. I have exported a `seedDatabase` function in `src/lib/firebase/firestore.ts`.
 2. You can temporarily call this function from `src/main.tsx` or a temporary button to populate `products`, `categories`, and `vendors`.
    - Example: Add `<button onClick={() => seedDatabase()}>Seed DB</button>` temporarily in `App.tsx`.
 3. Once seeded, the app will load meaningful data from Firestore.
 
-## 9. Verify
+## 10. Verify
 Run the app:
 ```bash
 npm run dev
@@ -72,6 +94,12 @@ npm run dev
 - Open console. 
 - If you see "Database empty, falling back to mock data", proceed to seed.
 - If you see products without that log, you are successfully pulling from Firestore!
+
+For upload verification in production:
+- Open browser devtools → Network and retry image upload.
+- If request returns **403**, rules/auth are blocking upload.
+- If request returns **404** or wrong bucket host/path, bucket env/config is incorrect.
+- If preflight fails with CORS, recheck bucket CORS origin/method/header settings.
 
 ## Troubleshooting "Blank Screen"
 - Ensure `.env` variables are correct.
