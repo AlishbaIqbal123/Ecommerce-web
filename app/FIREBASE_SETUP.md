@@ -58,6 +58,8 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_database_url.firebaseio.com
 ```
 
+> Note: Some older Firebase projects use `your_project_id.appspot.com` as the storage bucket format. Always copy the exact bucket value from Firebase Console.
+
 ### Storage bucket check for Vercel
 - In Vercel Project Settings → Environment Variables, verify `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` exactly matches Firebase Console → Storage bucket name.
 - Example bucket format for this project style: `project-id.firebasestorage.app`.
