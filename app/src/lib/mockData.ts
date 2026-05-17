@@ -160,7 +160,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: true,
         images: [
-            '/images/products/tableware-1.jpg',
+            '/images/products/tasbih-1.jpg',
         ],
         tags: ['oud', 'perfume', 'oil', 'unisex'],
         status: 'active',
@@ -186,7 +186,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            '/images/products/hijab-1.jpg',
+            '/images/products/tableware-1.jpg',
         ],
         tags: ['attar', 'rose', 'perfume', 'alcohol-free'],
         status: 'active',
@@ -480,7 +480,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/6183561/pexels-photo-6183561.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            '/images/products/dates-gift-1.jpg'
         ],
         tags: ['honey', 'natural', 'halal', 'sunnah'],
         status: 'active',
@@ -508,7 +508,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1549439602-43ebca23d7af?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/dates-gift-1.jpg'
         ],
         tags: ['gift', 'ramadan', 'box', 'set'],
         status: 'active',
@@ -534,7 +534,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: true,
         images: [
-            'https://images.unsplash.com/photo-1515562141207-7a88bd7ce3ee?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/wall-art-1.jpg'
         ],
         tags: ['jewelry', 'custom', 'gift', 'gold'],
         status: 'active',
@@ -562,7 +562,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/4019754/pexels-photo-4019754.jpeg?auto=compress&cs=tinysrgb&w=800'
+            '/images/products/books-1.jpg'
         ],
         tags: ['educational', 'books', 'kids'],
         status: 'active',
@@ -588,7 +588,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/books-1.jpg'
         ],
         tags: ['kids', 'book', 'ramadan', 'activity'],
         status: 'active',
@@ -614,7 +614,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/1961780/pexels-photo-1961780.jpeg?auto=compress&cs=tinysrgb&w=800',
+            '/images/products/tasbih-1.jpg',
         ],
         tags: ['rare', 'perfume', 'amber', 'luxury'],
         status: 'active',
@@ -640,7 +640,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/books-1.jpg'
         ],
         tags: ['seerah', 'book', 'history'],
         status: 'active',
@@ -666,7 +666,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1543362906-acfc16c623a2?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/dates-gift-1.jpg'
         ],
         tags: ['dates', 'halal', 'health'],
         status: 'active',
@@ -718,7 +718,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/books-1.jpg'
         ],
         tags: ['puzzle', 'educational', 'kids', 'arabic'],
         status: 'active',
@@ -744,7 +744,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1596193810149-165c71a3372c?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/prayer-rug-2.jpg'
         ],
         tags: ['travel', 'prayer', 'cotton'],
         status: 'active',
@@ -796,7 +796,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/4041391/pexels-photo-4041391.jpeg?auto=compress&cs=tinysrgb&w=800'
+            '/images/products/tasbih-1.jpg'
         ],
         tags: ['musk', 'oil', 'perfume'],
         status: 'active',
@@ -822,7 +822,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/4491881/pexels-photo-4491881.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            '/images/products/tableware-1.jpg'
         ],
         tags: ['burner', 'ceramic', 'decor', 'bakhoor'],
         status: 'active',
@@ -848,7 +848,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: true,
         images: [
-            'https://images.unsplash.com/photo-1589519160732-57fc498494f8?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/quran-1.jpg'
         ],
         tags: ['seerah', 'book', 'biography'],
         status: 'active',
@@ -874,7 +874,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/dates-gift-1.jpg'
         ],
         tags: ['turkish delight', 'halal', 'gift', 'food'],
         status: 'active',
@@ -900,7 +900,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1549439602-43ebca23d7af?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/books-1.jpg'
         ],
         tags: ['kids', 'game', 'educational'],
         status: 'active',
@@ -926,7 +926,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/1961780/pexels-photo-1961780.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            '/images/products/tasbih-1.jpg'
         ],
         tags: ['tasbih', 'black', 'prayer'],
         status: 'active',
@@ -952,7 +952,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: true,
         images: [
-            'https://images.unsplash.com/photo-1584281729288-665b16327318?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/hijab-1.jpg'
         ],
         tags: ['hijab', 'jersey', 'fashion'],
         status: 'active',
@@ -978,7 +978,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.pexels.com/photos/1961780/pexels-photo-1961780.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            '/images/products/tableware-1.jpg'
         ],
         tags: ['attar', 'amber', 'perfume'],
         status: 'active',
@@ -1004,7 +1004,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/abaya-1.jpg'
         ],
         tags: ['abaya', 'velvet', 'luxury', 'winter'],
         status: 'active',
@@ -1030,7 +1030,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1510366810232-a5676352934b?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/wall-art-1.jpg'
         ],
         tags: ['kids', 'stickers', 'decor', 'arabic'],
         status: 'active',
@@ -1056,7 +1056,7 @@ export const MOCK_PRODUCTS: Product[] = [
         trackInventory: true,
         allowBackorders: false,
         images: [
-            'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1200&auto=format&fit=crop'
+            '/images/products/books-1.jpg'
         ],
         tags: ['history', 'book', 'encyclopedia'],
         status: 'active',
