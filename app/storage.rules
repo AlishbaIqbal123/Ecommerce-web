@@ -1,10 +1,34 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      let userDocPath = /databases/(default)/documents/users/$(request.auth.uid);
+      return firestore.exists(userDocPath)
+        ? firestore.get(userDocPath).data.role
+        : '';
+    }
+
+    function isAdmin() {
+      return isAuth() && userRole() == 'admin';
+    }
+
+    // Product images are publicly readable in storefront.
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
+    // Optional admin-managed assets folder.
+    match /admin/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Deny all other paths by default.
     match /{allPaths=**} {
       allow read, write: if false;
     }
