@@ -32,13 +32,13 @@ service cloud.firestore {
     match /products/{productId} {
       allow read:   if true;
       allow create: if isAuth();
-      allow update: if isAuth() && (resource.data.vendorId == request.auth.uid || isAdmin());
+      allow update: if isAuth() && (resource.data.vendorId == request.auth.uid || isAdmin() || isVendor());
       allow delete: if isAuth() && (resource.data.vendorId == request.auth.uid || isAdmin());
     }
 
     match /categories/{categoryId} {
       allow read:  if true;
-      allow write: if isAdmin();
+      allow write: if isAuth();
     }
 
     match /carts/{cartId} {
