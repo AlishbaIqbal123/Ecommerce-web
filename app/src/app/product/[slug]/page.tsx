@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Share2, ShoppingBag, Star, Truck, Shield, RotateCcw, Minus, Plus, Store } from 'lucide-react';
+import { Heart, Share2, ShoppingBag, Star, Truck, Shield, RotateCcw, Minus, Plus, Store, Eye } from 'lucide-react';
 import { useProductStore, useCartStore, useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -300,6 +300,21 @@ export default function ProductPage() {
                                 <Share2 className="w-5 h-5" />
                             </Button>
                         </div>
+
+                        {/* Preview button for digital planner products */}
+                        {product.tags?.includes('printable') && (
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="w-full border-gold-100 text-gold-100 hover:bg-gold-100 hover:text-white transition-colors"
+                                asChild
+                            >
+                                <Link href="/product/wedding-binder-preview" target="_blank">
+                                    <Eye className="w-5 h-5 mr-2" />
+                                    Preview All 7 Pages
+                                </Link>
+                            </Button>
+                        )}
                     </div>
 
                     {/* Features */}
