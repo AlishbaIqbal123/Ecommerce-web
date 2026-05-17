@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { formatDate, formatCurrency, cn } from '@/lib/utils';
 import { useVendorStore, useOrderStore } from '@/store';
 import { toast } from 'sonner';
@@ -446,28 +447,49 @@ function AdminProductCRUD({ products, vendors, onRefresh }: any) {
     const [editing, setEditing] = useState<any>(null);
     const [form, setForm] = useState<any>({});
     const [adding, setAdding] = useState(false);
-    const [newForm, setNewForm] = useState({ name: '', description: '', price: '', inventory: '', categoryId: '', vendorId: '', imageUrl: '' });
+    const [newForm, setNewForm] = useState({ name: '', description: '', price: '', inventory: '', categoryId: '', vendorId: '', images: [''] });
     const [saving, setSaving] = useState(false);
 
-    const openEdit = (p: any) => { setEditing(p); setForm({ name: p.name, description: p.description, price: p.price, inventory: p.inventory, categoryId: p.categoryId, status: p.status, images: p.images?.join('\n') || '' }); };
+    const openEdit = (p: any) => {
+        setEditing(p);
+        setForm({
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            inventory: p.inventory,
+            categoryId: p.categoryId,
+            status: p.status,
+            images: p.images?.length ? p.images : [''],
+        });
+    };
 
     const saveEdit = async () => {
+        const finalImages = (form.images || []).filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
         setSaving(true);
         try {
             const { updateDocument } = await import('@/lib/firebase/firestore');
-            await updateDocument('products', editing.id, { ...form, price: Number(form.price), inventory: Number(form.inventory), images: form.images.split('\n').map((s: string) => s.trim()).filter(Boolean) });
+            await updateDocument('products', editing.id, { ...form, price: Number(form.price), inventory: Number(form.inventory), images: finalImages });
             toast.success('Product updated'); setEditing(null); onRefresh();
         } catch { toast.error('Failed'); } finally { setSaving(false); }
     };
 
     const addProduct = async () => {
         if (!newForm.vendorId) { toast.error('Select a vendor'); return; }
+        const finalImages = newForm.images.filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
         setSaving(true);
         try {
             const { addProductAdmin } = await import('@/lib/firebase/firestore');
             const v = vendors.find((x: any) => x.id === newForm.vendorId);
-            await addProductAdmin({ vendorId: newForm.vendorId, vendorName: v?.businessName || '', categoryId: newForm.categoryId, name: newForm.name, slug: newForm.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''), description: newForm.description, price: Number(newForm.price), inventory: Number(newForm.inventory), images: newForm.imageUrl ? [newForm.imageUrl] : ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=800'], status: 'active', featured: false, rating: 0, reviewCount: 0, salesCount: 0, viewsCount: 0, tags: [], sku: `ADMIN-${Date.now()}`, trackInventory: true, allowBackorders: false });
-            toast.success('Product added'); setAdding(false); setNewForm({ name: '', description: '', price: '', inventory: '', categoryId: '', vendorId: '', imageUrl: '' }); onRefresh();
+            await addProductAdmin({ vendorId: newForm.vendorId, vendorName: v?.businessName || '', categoryId: newForm.categoryId, name: newForm.name, slug: newForm.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''), description: newForm.description, price: Number(newForm.price), inventory: Number(newForm.inventory), images: finalImages, status: 'active', featured: false, rating: 0, reviewCount: 0, salesCount: 0, viewsCount: 0, tags: [], sku: `ADMIN-${Date.now()}`, trackInventory: true, allowBackorders: false });
+            toast.success('Product added'); setAdding(false); setNewForm({ name: '', description: '', price: '', inventory: '', categoryId: '', vendorId: '', images: [''] }); onRefresh();
         } catch { toast.error('Failed'); } finally { setSaving(false); }
     };
 
@@ -527,7 +549,42 @@ function AdminProductCRUD({ products, vendors, onRefresh }: any) {
                             </div>
                             <div className="space-y-1"><Label className="text-xs">Price ($)</Label><Input type="number" step="0.01" value={newForm.price} onChange={e => setNewForm(p => ({ ...p, price: e.target.value }))} /></div>
                             <div className="space-y-1"><Label className="text-xs">Inventory</Label><Input type="number" value={newForm.inventory} onChange={e => setNewForm(p => ({ ...p, inventory: e.target.value }))} /></div>
-                            <div className="space-y-1 col-span-2"><Label className="text-xs">Image URL (optional)</Label><Input value={newForm.imageUrl} onChange={e => setNewForm(p => ({ ...p, imageUrl: e.target.value }))} placeholder="https://..." /></div>
+                            <div className="space-y-1 col-span-2">
+                                <Label className="text-xs">Product Images</Label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {newForm.images.map((url, index) => (
+                                        <div key={index} className="space-y-2">
+                                            <ImageUpload
+                                                value={url}
+                                                onChange={(newUrl) => setNewForm(p => {
+                                                    const updated = [...p.images];
+                                                    updated[index] = newUrl;
+                                                    return { ...p, images: updated };
+                                                })}
+                                                storagePath={() => `products/${newForm.vendorId || 'admin'}/admin_new_${index}_${Date.now()}.jpg`}
+                                                shape="square"
+                                                placeholder={index === 0 ? 'Cover image' : 'Add image'}
+                                            />
+                                            {index > 0 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    onClick={() => setNewForm(p => ({ ...p, images: p.images.filter((_: string, i: number) => i !== index) }))}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {newForm.images.length < 6 && (
+                                        <Button type="button" variant="outline" className="h-full min-h-[100px]" onClick={() => setNewForm(p => ({ ...p, images: [...p.images, ''] }))}>
+                                            <Plus className="w-4 h-4 mr-1" /> Add Slot
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="space-y-1"><Label className="text-xs">Description</Label><Textarea value={newForm.description} onChange={e => setNewForm(p => ({ ...p, description: e.target.value }))} rows={3} /></div>
                     </div>
@@ -555,7 +612,42 @@ function AdminProductCRUD({ products, vendors, onRefresh }: any) {
                                     <SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="draft">Draft</SelectItem><SelectItem value="archived">Archived</SelectItem></SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-1 col-span-2"><Label className="text-xs">Image URLs (one per line)</Label><Textarea value={form.images || ''} onChange={e => setForm((p: any) => ({ ...p, images: e.target.value }))} rows={3} placeholder="https://..." /></div>
+                            <div className="space-y-1 col-span-2">
+                                <Label className="text-xs">Product Images</Label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {(form.images || []).map((url: string, index: number) => (
+                                        <div key={index} className="space-y-2">
+                                            <ImageUpload
+                                                value={url}
+                                                onChange={(newUrl) => setForm((p: any) => {
+                                                    const updated = [...(p.images || [])];
+                                                    updated[index] = newUrl;
+                                                    return { ...p, images: updated };
+                                                })}
+                                                storagePath={() => `products/${editing?.vendorId || 'admin'}/admin_edit_${editing?.id || 'new'}_${index}_${Date.now()}.jpg`}
+                                                shape="square"
+                                                placeholder={index === 0 ? 'Cover image' : 'Add image'}
+                                            />
+                                            {index > 0 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    onClick={() => setForm((p: any) => ({ ...p, images: (p.images || []).filter((_: string, i: number) => i !== index) }))}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {(form.images || []).length < 6 && (
+                                        <Button type="button" variant="outline" className="h-full min-h-[100px]" onClick={() => setForm((p: any) => ({ ...p, images: [...(p.images || []), ''] }))}>
+                                            <Plus className="w-4 h-4 mr-1" /> Add Slot
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="space-y-1"><Label className="text-xs">Description</Label><Textarea value={form.description || ''} onChange={e => setForm((p: any) => ({ ...p, description: e.target.value }))} rows={3} /></div>
                     </div>

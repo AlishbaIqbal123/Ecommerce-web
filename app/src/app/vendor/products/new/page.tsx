@@ -72,6 +72,12 @@ export default function NewProductPage() {
         e.preventDefault();
         if (!currentVendor) return;
 
+        const finalImages = uploadedImages.filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
+
         setIsLoading(true);
         try {
             const { createDocument } = await import('@/lib/firebase/firestore');
@@ -81,8 +87,6 @@ export default function NewProductPage() {
 
             // Upload all selected files
             // Use already-uploaded Firebase URLs from ImageUpload components
-            const finalImages = uploadedImages.filter(Boolean);
-
             const productData = {
                 id: productId,
                 vendorId: currentVendor.id,
@@ -93,7 +97,7 @@ export default function NewProductPage() {
                 price: Number(formData.price),
                 inventory: Number(formData.inventory),
                 categoryId: formData.categoryId,
-                images: finalImages.length > 0 ? finalImages : ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop'],
+                images: finalImages,
                 status: 'active',
                 rating: 0,
                 reviewCount: 0,
