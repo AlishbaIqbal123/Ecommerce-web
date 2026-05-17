@@ -6,9 +6,10 @@ service firebase.storage {
     }
 
     function userRole() {
-      return firestore.get(
-        /databases/(default)/documents/users/$(request.auth.uid)
-      ).data.role;
+      let userDocPath = /databases/(default)/documents/users/$(request.auth.uid);
+      return firestore.exists(userDocPath)
+        ? firestore.get(userDocPath).data.role
+        : '';
     }
 
     function isAdmin() {
