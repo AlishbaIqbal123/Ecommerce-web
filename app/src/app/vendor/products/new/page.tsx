@@ -72,6 +72,12 @@ export default function NewProductPage() {
         e.preventDefault();
         if (!currentVendor) return;
 
+        const finalImages = uploadedImages.filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
+
         setIsLoading(true);
         try {
             const { createDocument } = await import('@/lib/firebase/firestore');
@@ -81,12 +87,6 @@ export default function NewProductPage() {
 
             // Upload all selected files
             // Use already-uploaded Firebase URLs from ImageUpload components
-            const finalImages = uploadedImages.filter(Boolean);
-            if (finalImages.length === 0) {
-                toast.error('Please upload at least one product image');
-                return;
-            }
-
             const productData = {
                 id: productId,
                 vendorId: currentVendor.id,

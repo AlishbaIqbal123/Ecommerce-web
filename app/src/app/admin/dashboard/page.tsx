@@ -464,13 +464,13 @@ function AdminProductCRUD({ products, vendors, onRefresh }: any) {
     };
 
     const saveEdit = async () => {
+        const finalImages = (form.images || []).filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
         setSaving(true);
         try {
-            const finalImages = (form.images || []).filter(Boolean);
-            if (finalImages.length === 0) {
-                toast.error('Upload at least one product image');
-                return;
-            }
             const { updateDocument } = await import('@/lib/firebase/firestore');
             await updateDocument('products', editing.id, { ...form, price: Number(form.price), inventory: Number(form.inventory), images: finalImages });
             toast.success('Product updated'); setEditing(null); onRefresh();
@@ -479,13 +479,13 @@ function AdminProductCRUD({ products, vendors, onRefresh }: any) {
 
     const addProduct = async () => {
         if (!newForm.vendorId) { toast.error('Select a vendor'); return; }
+        const finalImages = newForm.images.filter(Boolean);
+        if (finalImages.length === 0) {
+            toast.error('Please upload at least one product image');
+            return;
+        }
         setSaving(true);
         try {
-            const finalImages = newForm.images.filter(Boolean);
-            if (finalImages.length === 0) {
-                toast.error('Upload at least one product image');
-                return;
-            }
             const { addProductAdmin } = await import('@/lib/firebase/firestore');
             const v = vendors.find((x: any) => x.id === newForm.vendorId);
             await addProductAdmin({ vendorId: newForm.vendorId, vendorName: v?.businessName || '', categoryId: newForm.categoryId, name: newForm.name, slug: newForm.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''), description: newForm.description, price: Number(newForm.price), inventory: Number(newForm.inventory), images: finalImages, status: 'active', featured: false, rating: 0, reviewCount: 0, salesCount: 0, viewsCount: 0, tags: [], sku: `ADMIN-${Date.now()}`, trackInventory: true, allowBackorders: false });
